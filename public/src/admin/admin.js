@@ -6,7 +6,6 @@ require('../app');
 // from plugins that add files to "acpScripts" block in plugin.json
 // eslint-disable-next-line
 require('../../scripts-admin');
-
 app.onDomReady();
 
 (function () {
@@ -19,16 +18,19 @@ app.onDomReady();
 		if (logoutTimer) {
 			clearTimeout(logoutTimer);
 		}
-		// pre-translate language string gh#9046
 		if (!logoutMessage) {
+			loadLogoutMessage();
+		}
+		logoutTimer = setTimeout(handleLogout, 3600000);
+
+		function loadLogoutMessage() {
 			require(['translator'], function (translator) {
 				translator.translate('[[login:logged-out-due-to-inactivity]]', function (translated) {
 					logoutMessage = translated;
 				});
 			});
 		}
-
-		logoutTimer = setTimeout(function () {
+		function handleLogout() {
 			require(['bootbox'], function (bootbox) {
 				bootbox.alert({
 					closeButton: false,
@@ -38,9 +40,8 @@ app.onDomReady();
 					},
 				});
 			});
-		}, 3600000);
+		}
 	}
-
 	require(['hooks', 'admin/settings'], (hooks, Settings) => {
 		hooks.on('action:ajaxify.end', (data) => {
 			updatePageTitle(data.url);
