@@ -1,6 +1,5 @@
 'use strict';
 
-
 define('admin/extend/widgets', [
 	'bootbox',
 	'alerts',
@@ -63,7 +62,6 @@ define('admin/extend/widgets', [
 				helper: function (e) {
 					let target = $(e.target);
 					target = target.attr('data-container-html') ? target : target.parents('[data-container-html]');
-
 					return target.clone().addClass('block').width(target.width()).css('opacity', '0.5');
 				},
 				distance: 10,
@@ -113,27 +111,15 @@ define('admin/extend/widgets', [
 				const location = el.attr('data-location');
 				const area = el.children('.widget-area');
 				const widgets = [];
-
 				area.find('.widget-panel[data-widget]').each(function () {
 					const widgetData = {};
 					const data = $(this).find('form').serializeArray();
 
-					for (const d in data) {
-						if (data.hasOwnProperty(d)) {
-							if (data[d].name) {
-								if (widgetData[data[d].name]) {
-									if (!Array.isArray(widgetData[data[d].name])) {
-										widgetData[data[d].name] = [
-											widgetData[data[d].name],
-										];
-									}
-									widgetData[data[d].name].push(data[d].value);
-								} else {
-									widgetData[data[d].name] = data[d].value;
-								}
-							}
+					data.forEach((d) => {
+						if (d.name) {
+							updateWidgetData(widgetData, d);
 						}
-					}
+					});
 
 					widgets.push({
 						widget: $(this).attr('data-widget'),
@@ -161,23 +147,16 @@ define('admin/extend/widgets', [
 			});
 		}
 
-		$('.color-selector').on('click', '.btn', function () {
-			const btn = $(this);
-			const selector = btn.parents('.color-selector');
-			const container = selector.parents('[data-container-html]');
-			const classList = [];
-
-			selector.children().each(function () {
-				classList.push($(this).attr('data-class'));
-			});
-
-			container
-				.removeClass(classList.join(' '))
-				.addClass(btn.attr('data-class'));
-
-			container.attr('data-container-html', container.attr('data-container-html')
-				.replace(/class="[a-zA-Z0-9-\s]+"/, 'class="' + container[0].className.replace(' pointer ui-draggable ui-draggable-handle', '') + '"'));
-		});
+		function updateWidgetData(widgetData, d) {
+			if (widgetData[d.name]) {
+				if (!Array.isArray(widgetData[d.name])) {
+					widgetData[d.name] = [widgetData[d.name]];
+				}
+				widgetData[d.name].push(d.value);
+			} else {
+				widgetData[d.name] = d.value;
+			}
+		}
 	}
 
 	function createDatePicker(el) {
@@ -196,7 +175,6 @@ define('admin/extend/widgets', [
 					accept: '[data-container-html]',
 					drop: function (event, ui) {
 						const el = $(this);
-
 						el.find('.card-body .container-html').val(ui.draggable.attr('data-container-html'));
 						el.find('.card-body').removeClass('hidden');
 					},
@@ -273,29 +251,36 @@ define('admin/extend/widgets', [
 			const templateToClone = $('#active-widgets .tab-pane[data-template="' + template + '"] .area');
 
 			const currentAreas = currentTemplate.map(function () {
-				return $(this).attr('data-location');
+				return $(this).data('location');
+			}).get();
+			const clonedAreas = templateToClone.map(function () {
+				return $(this).data('location');
 			}).get();
 
-			const areasToClone = templateToClone.map(function () {
-				const location = $(this).attr('data-location');
-				return currentAreas.indexOf(location) !== -1 ? location : undefined;
-			}).get().filter(function (i) { return i; });
+			if (clonedAreas.length === 0) {
+				return alerts.error('[[admin/extend/widgets:error.template-empty]]');
+			}
 
-			function clone(location) {
-				$('#active-widgets .tab-pane[data-template="' + template + '"] [data-location="' + location + '"]').each(function () {
-					$(this).find('[data-widget]').each(function () {
-						const widget = $(this).clone(true);
-						$('#active-widgets .active.tab-pane[data-template]:not([data-template="global"]) [data-location="' + location + '"] .widget-area').append(widget);
+			currentAreas.forEach((location) => {
+				if (!clonedAreas.includes(location)) {
+					templateToClone.find(`[data-location="${location}"]`).remove();
+				}
+			});
+
+			const clonedHTML = templateToClone[0].outerHTML;
+			$('#active-widgets .tab-pane[data-template="' + template + '"]').append(clonedHTML);
+			$('#active-widgets .tab-pane[data-template="' + template + '"] .area')
+				.each(function () {
+					const container = $(this);
+					const savedWidgets = container.find('[data-widget]');
+					savedWidgets.each(function () {
+						const widget = $(this);
+						appendToggle(widget);
+						createDatePicker(widget);
 					});
 				});
-			}
 
-			for (let i = 0, ii = areasToClone.length; i < ii; i++) {
-				const location = areasToClone[i];
-				clone(location);
-			}
-
-			alerts.success('[[admin/extend/widgets:alert.clone-success]]');
+			alerts.success('[[admin/extend/widgets:clone.success]]');
 		});
 	}
 
