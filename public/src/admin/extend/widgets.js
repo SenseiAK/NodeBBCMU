@@ -146,7 +146,6 @@ define('admin/extend/widgets', [
 				}, 5000);
 			});
 		}
-
 		function updateWidgetData(widgetData, d) {
 			if (widgetData[d.name]) {
 				if (!Array.isArray(widgetData[d.name])) {
